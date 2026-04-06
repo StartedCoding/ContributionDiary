@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const ROOT = path.resolve(".");
+const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const PARSED = path.join(ROOT, "scripts", "_parsed.json");
 const DOCS = path.join(ROOT, "docs");
 
@@ -37,9 +37,7 @@ function computeGlobalStats(users) {
       activeDays: uDates.size,
       streak: streak.current,
       longestStreak: streak.longest,
-      lastActive: u.entries.length
-        ? u.entries[u.entries.length - 1].date
-        : null,
+      lastActive: u.entries.length ? u.entries[u.entries.length - 1].date : null,
     });
   }
 
@@ -63,22 +61,16 @@ function computeGlobalStats(users) {
 function computeStreak(entries) {
   if (!entries.length) return { current: 0, longest: 0 };
   const dates = [...new Set(entries.map((e) => e.date))].sort();
-  let streak = 1,
-    longest = 1;
+  let streak = 1, longest = 1;
   for (let i = 1; i < dates.length; i++) {
-    const diff = Math.round(
-      (new Date(dates[i]) - new Date(dates[i - 1])) / 86400000,
-    );
+    const diff = Math.round((new Date(dates[i]) - new Date(dates[i - 1])) / 86400000);
     streak = diff === 1 ? streak + 1 : 1;
     longest = Math.max(longest, streak);
   }
   const last = dates[dates.length - 1];
   const today = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  return {
-    current: last === today || last === yesterday ? streak : 0,
-    longest,
-  };
+  return { current: (last === today || last === yesterday) ? streak : 0, longest };
 }
 
 function buildDashboard(stats) {
@@ -445,7 +437,7 @@ function buildDashboard(stats) {
         <span class="streak-pill ${u.streak > 0 ? "active" : "inactive"}">
           ${u.streak > 0 ? `🔥 ${u.streak}d` : `${u.longestStreak}d best`}
         </span>
-      </div>`,
+      </div>`
         )
         .join("")}
     </div>
