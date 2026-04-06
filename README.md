@@ -8,6 +8,16 @@ This is not a portfolio. It's a **practice**.
 
 ---
 
+
+<!-- STATS:START -->
+| Metric | Value |
+|--------|-------|
+| 👥 Contributors | 1 |
+| 📝 Total Entries | 1 |
+| ⏱️ Hours Tracked | 1h |
+| 🔥 Top Tags | `open-source` `setup` |
+| 🕐 Last Updated | 2026-04-06 |
+<!-- STATS:END -->
 ## Why Public Logging?
 
 When you log publicly, something shifts. You stop doing work just to finish it - you do it in a way you can explain. That habit alone compounds into better thinking, clearer communication, and a growing archive of evidence that you show up consistently.
