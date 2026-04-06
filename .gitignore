@@ -1,0 +1,13 @@
+scripts/_parsed.json
+
+# dependencies
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+*.swp
