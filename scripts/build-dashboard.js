@@ -1,0 +1,561 @@
+import fs from "fs";
+import path from "path";
+
+const ROOT = path.resolve(".");
+const PARSED = path.join(ROOT, "scripts", "_parsed.json");
+const DOCS = path.join(ROOT, "docs");
+
+function computeGlobalStats(users) {
+  let totalEntries = 0;
+  let totalHours = 0;
+  const tagCount = {};
+  const dateActivity = {};
+  const userStats = [];
+
+  for (const u of Object.values(users)) {
+    let uHours = 0;
+    const uDates = new Set();
+
+    for (const e of u.entries) {
+      totalEntries++;
+      totalHours += e.time_spent;
+      uHours += e.time_spent;
+      uDates.add(e.date);
+
+      dateActivity[e.date] = (dateActivity[e.date] || 0) + 1;
+
+      for (const tag of e.tags) {
+        tagCount[tag] = (tagCount[tag] || 0) + 1;
+      }
+    }
+
+    const streak = computeStreak(u.entries);
+    userStats.push({
+      username: u.username,
+      entries: u.entries.length,
+      hours: Math.round(uHours),
+      activeDays: uDates.size,
+      streak: streak.current,
+      longestStreak: streak.longest,
+      lastActive: u.entries.length
+        ? u.entries[u.entries.length - 1].date
+        : null,
+    });
+  }
+
+  userStats.sort((a, b) => b.entries - a.entries);
+
+  const topTags = Object.entries(tagCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20);
+
+  return {
+    totalEntries,
+    totalHours: Math.round(totalHours),
+    totalContributors: Object.keys(users).length,
+    tagCount,
+    topTags,
+    dateActivity,
+    userStats,
+  };
+}
+
+function computeStreak(entries) {
+  if (!entries.length) return { current: 0, longest: 0 };
+  const dates = [...new Set(entries.map((e) => e.date))].sort();
+  let streak = 1,
+    longest = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const diff = Math.round(
+      (new Date(dates[i]) - new Date(dates[i - 1])) / 86400000,
+    );
+    streak = diff === 1 ? streak + 1 : 1;
+    longest = Math.max(longest, streak);
+  }
+  const last = dates[dates.length - 1];
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  return {
+    current: last === today || last === yesterday ? streak : 0,
+    longest,
+  };
+}
+
+function buildDashboard(stats) {
+  const heatmapData = JSON.stringify(stats.dateActivity);
+  const tagData = JSON.stringify(stats.topTags);
+  const leaderboard = stats.userStats;
+  const lastUpdated = new Date().toISOString().slice(0, 10);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ContributionDiary — Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --surface2: #1c1c1c;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #666;
+    --accent: #e8ff47;
+    --accent2: #47ffe8;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  header span {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+  }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  /* METRICS */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .metric {
+    background: var(--surface);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .metric-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  /* SECTIONS */
+  section h2 {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* HEATMAP */
+  .heatmap-wrap {
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+
+  #heatmap {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .heatmap-row {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+  }
+
+  .heatmap-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+    margin-right: 4px;
+  }
+
+  .heatmap-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--surface2);
+    flex-shrink: 0;
+    cursor: default;
+    transition: opacity 0.15s;
+    position: relative;
+  }
+
+  .heatmap-cell:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    white-space: nowrap;
+    padding: 3px 8px;
+    border-radius: 3px;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* LEADERBOARD */
+  .leaderboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .lb-header, .lb-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 80px 80px 80px 100px;
+    padding: 0.75rem 1.25rem;
+    gap: 1rem;
+    align-items: center;
+    background: var(--surface);
+  }
+
+  .lb-header {
+    background: var(--surface2);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .lb-row:hover { background: var(--surface2); }
+
+  .lb-rank {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .lb-rank.top { color: var(--accent); }
+
+  .lb-user {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .lb-user a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .lb-user a:hover { color: var(--accent); }
+
+  .lb-num {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--text);
+    text-align: right;
+  }
+
+  .streak-pill {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-align: center;
+  }
+
+  .streak-pill.active {
+    background: rgba(232, 255, 71, 0.12);
+    color: var(--accent);
+    border: 1px solid rgba(232, 255, 71, 0.3);
+  }
+
+  .streak-pill.inactive {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  /* TAG CLOUD */
+  .tagcloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 3px 10px;
+    cursor: default;
+    transition: border-color 0.15s, color 0.15s;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .tag:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 3rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    gap: 2rem;
+  }
+
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 700px) {
+    header, main, footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .lb-header, .lb-row {
+      grid-template-columns: 36px 1fr 60px 70px;
+    }
+    .lb-col-hide { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ContributionDiary</h1>
+  <span>Public Dashboard</span>
+  <span class="badge">LIVE</span>
+</header>
+
+<main>
+
+  <div class="metrics" id="metrics">
+    <div class="metric">
+      <span class="metric-label">Contributors</span>
+      <span class="metric-value">${stats.totalContributors}</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Total Entries</span>
+      <span class="metric-value">${stats.totalEntries}</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Hours Tracked</span>
+      <span class="metric-value">${stats.totalHours}h</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Last Updated</span>
+      <span class="metric-value" style="font-size:1rem;padding-top:0.4rem;">${lastUpdated}</span>
+    </div>
+  </div>
+
+  <section>
+    <h2>Activity Heatmap — Last 12 Months</h2>
+    <div class="heatmap-wrap">
+      <div id="heatmap"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Leaderboard</h2>
+    <div class="leaderboard">
+      <div class="lb-header">
+        <span>#</span>
+        <span>Developer</span>
+        <span style="text-align:right">Entries</span>
+        <span style="text-align:right">Hours</span>
+        <span style="text-align:right" class="lb-col-hide">Days</span>
+        <span style="text-align:center">Streak</span>
+      </div>
+      ${leaderboard
+        .map(
+          (u, i) => `
+      <div class="lb-row">
+        <span class="lb-rank ${i < 3 ? "top" : ""}">${i + 1}</span>
+        <span class="lb-user"><a href="entries/${u.username}/PROFILE.md">@${u.username}</a></span>
+        <span class="lb-num">${u.entries}</span>
+        <span class="lb-num">${u.hours}h</span>
+        <span class="lb-num lb-col-hide">${u.activeDays}</span>
+        <span class="streak-pill ${u.streak > 0 ? "active" : "inactive"}">
+          ${u.streak > 0 ? `🔥 ${u.streak}d` : `${u.longestStreak}d best`}
+        </span>
+      </div>`,
+        )
+        .join("")}
+    </div>
+  </section>
+
+  <section>
+    <h2>Tag Cloud</h2>
+    <div class="tagcloud" id="tagcloud"></div>
+  </section>
+
+</main>
+
+<footer>
+  <span>Auto-generated · ${lastUpdated}</span>
+  <a href="https://github.com/your-org/contribution-diary">GitHub</a>
+  <a href="README.md">README</a>
+</footer>
+
+<script>
+const heatmapData = ${heatmapData};
+const tagData = ${tagData};
+
+// --- HEATMAP ---
+function buildHeatmap() {
+  const container = document.getElementById("heatmap");
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setFullYear(startDate.getFullYear() - 1);
+  // Snap to Sunday
+  startDate.setDate(startDate.getDate() - startDate.getDay());
+
+  const weeks = [];
+  let current = new Date(startDate);
+  while (current <= today) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      week.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  const maxVal = Math.max(...Object.values(heatmapData), 1);
+
+  // Day labels column
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Build by rows (day of week)
+  for (let d = 0; d < 7; d++) {
+    const row = document.createElement("div");
+    row.className = "heatmap-row";
+
+    const label = document.createElement("span");
+    label.className = "heatmap-label";
+    label.textContent = d % 2 === 1 ? days[d] : "";
+    row.appendChild(label);
+
+    for (const week of weeks) {
+      const date = week[d];
+      if (!date) continue;
+      const key = date.toISOString().slice(0, 10);
+      const count = heatmapData[key] || 0;
+      const cell = document.createElement("div");
+      cell.className = "heatmap-cell";
+      cell.setAttribute("data-tip", count ? key + " · " + count + " entr" + (count === 1 ? "y" : "ies") : key + " · no entries");
+
+      if (count > 0) {
+        const intensity = Math.min(count / maxVal, 1);
+        const alpha = 0.15 + intensity * 0.85;
+        cell.style.background = \`rgba(232, 255, 71, \${alpha.toFixed(2)})\`;
+      }
+
+      row.appendChild(cell);
+    }
+    container.appendChild(row);
+  }
+}
+
+// --- TAG CLOUD ---
+function buildTagCloud() {
+  const container = document.getElementById("tagcloud");
+  const max = tagData[0]?.[1] || 1;
+  const minSize = 0.72;
+  const maxSize = 1.1;
+
+  for (const [tag, count] of tagData) {
+    const el = document.createElement("span");
+    el.className = "tag";
+    const size = minSize + ((count / max) * (maxSize - minSize));
+    el.style.fontSize = size.toFixed(2) + "rem";
+    el.textContent = "#" + tag.replace(/^#/, "");
+    el.title = count + " entr" + (count === 1 ? "y" : "ies");
+    container.appendChild(el);
+  }
+}
+
+buildHeatmap();
+buildTagCloud();
+</script>
+</body>
+</html>`;
+}
+
+function buildDashboardFile() {
+  if (!fs.existsSync(DOCS)) fs.mkdirSync(DOCS, { recursive: true });
+  const users = JSON.parse(fs.readFileSync(PARSED, "utf-8"));
+  const stats = computeGlobalStats(users);
+  const html = buildDashboard(stats);
+  fs.writeFileSync(path.join(DOCS, "index.html"), html);
+  console.log("Dashboard built → docs/index.html");
+}
+
+buildDashboardFile();

@@ -1,0 +1,20 @@
+{
+  "name": "contribution-diary-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "parse": "node parse-entries.js",
+    "profiles": "node generate-profiles.js",
+    "readme": "node update-readme.js",
+    "dashboard": "node build-dashboard.js",
+    "build": "node parse-entries.js && node update-readme.js && node generate-profiles.js && node build-dashboard.js"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "glob": "^10.3.10"
+  }
+}
