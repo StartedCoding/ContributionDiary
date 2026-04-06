@@ -3,7 +3,7 @@ import path from "path";
 import matter from "gray-matter";
 import { glob } from "glob";
 
-const ROOT = path.resolve(".");
+const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const ENTRIES_DIR = path.join(ROOT, "entries");
 const OUT = path.join(ROOT, "scripts", "_parsed.json");
 
@@ -51,9 +51,7 @@ function parseEntries() {
   }
 
   fs.writeFileSync(OUT, JSON.stringify(users, null, 2));
-  console.log(
-    `Parsed ${files.length} files across ${Object.keys(users).length} users.`,
-  );
+  console.log(`Parsed ${files.length} files across ${Object.keys(users).length} users.`);
   return users;
 }
 
