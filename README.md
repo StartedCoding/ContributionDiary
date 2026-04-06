@@ -42,7 +42,7 @@ Six months of daily logs is more convincing than any resume bullet.
 **Real example:**
 ```
 /entries
-  /utsav-sharma
+  /Utsav1256
     2025-04-06-postpilot-auth.md
     2025-04-07-rate-limiter.md
 ```
