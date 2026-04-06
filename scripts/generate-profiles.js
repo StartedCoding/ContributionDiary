@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const ROOT = path.resolve(".");
+const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const PARSED = path.join(ROOT, "scripts", "_parsed.json");
 
 function computeStreak(entries) {
@@ -55,10 +55,7 @@ function recentEntries(entries, n = 5) {
   return [...entries]
     .reverse()
     .slice(0, n)
-    .map(
-      (e) =>
-        `| ${e.date} | ${e.project} | ${e.type} | ${e.time_spent}h | ${e.tags.map((t) => `\`${t}\``).join(" ")} |`,
-    )
+    .map((e) => `| ${e.date} | ${e.project} | ${e.type} | ${e.time_spent}h | ${e.tags.map((t) => `\`${t}\``).join(" ")} |`)
     .join("\n");
 }
 
@@ -68,9 +65,7 @@ function generateProfile(user) {
   const totalHours = Math.round(entries.reduce((s, e) => s + e.time_spent, 0));
   const totalEntries = entries.length;
   const activeDays = new Set(entries.map((e) => e.date)).size;
-  const projects = [...new Set(entries.map((e) => e.project))].filter(
-    (p) => p !== "unknown",
-  );
+  const projects = [...new Set(entries.map((e) => e.project))].filter((p) => p !== "unknown");
   const lastActive = entries.length ? entries[entries.length - 1].date : "—";
   const tags = topTags(entries);
   const recent = recentEntries(entries);
