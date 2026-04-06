@@ -26,21 +26,24 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: |
-          cd scripts
-          npm install
+        working-directory: scripts
+        run: npm install
 
       - name: Parse all entries
-        run: node scripts/parse-entries.js
+        working-directory: scripts
+        run: node parse-entries.js
 
       - name: Update README stats
-        run: node scripts/update-readme.js
+        working-directory: scripts
+        run: node update-readme.js
 
       - name: Generate per-user profiles
-        run: node scripts/generate-profiles.js
+        working-directory: scripts
+        run: node generate-profiles.js
 
       - name: Build GitHub Pages dashboard
-        run: node scripts/build-dashboard.js
+        working-directory: scripts
+        run: node build-dashboard.js
 
       - name: Commit generated files
         run: |
