@@ -10,7 +10,7 @@ This is not a portfolio. It's a **practice**.
 
 ## Why Public Logging?
 
-When you log publicly, something shifts. You stop doing work just to finish it — you do it in a way you can explain. That habit alone compounds into better thinking, clearer communication, and a growing archive of evidence that you show up consistently.
+When you log publicly, something shifts. You stop doing work just to finish it - you do it in a way you can explain. That habit alone compounds into better thinking, clearer communication, and a growing archive of evidence that you show up consistently.
 
 Six months of daily logs is more convincing than any resume bullet.
 
@@ -20,9 +20,9 @@ Six months of daily logs is more convincing than any resume bullet.
 
 | Log Type | Best For |
 |---|---|
-| 📌 **Contribution Log** | Deep work — features, bug fixes, open-source PRs |
-| ⏱️ **Hourly Log** | Daily consistency — what you actually did, hour by hour |
-| 🗓️ **Weekly Review** | Reflection — wins, patterns, what to carry forward |
+| 📌 **Contribution Log** | Deep work - features, bug fixes, open-source PRs |
+| ⏱️ **Hourly Log** | Daily consistency - what you actually did, hour by hour |
+| 🗓️ **Weekly Review** | Reflection - wins, patterns, what to carry forward |
 
 ---
 
@@ -202,7 +202,7 @@ Use consistent tags so entries stay searchable across the repo.
 
 - One entry per pull request
 - File names must follow `YYYY-MM-DD-project-name.md` format
-- Use the templates from `/templates` — you can extend them, not shrink them
+- Use the templates from `/templates` - you can extend them, not shrink them
 - Keep it honest — struggle and failures are as valuable as wins
 - No self-promotion, spam, or entries under 100 words
 - See `CONTRIBUTING.md` for full rules
