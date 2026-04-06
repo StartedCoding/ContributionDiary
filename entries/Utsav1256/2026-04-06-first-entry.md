@@ -18,7 +18,7 @@ Forked and configured the repo, activated the tracking pipeline.
 
 ## 🧠 What I Learned
 
-How GitHub Actions can auto-commit generated files back to main.
+How GitHub Actions can auto-commit generated files back to main🐸.
 
 ## ⏱️ Time Spent
 
