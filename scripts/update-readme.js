@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const ROOT = path.resolve(".");
+const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const PARSED = path.join(ROOT, "scripts", "_parsed.json");
 const README = path.join(ROOT, "README.md");
 
@@ -32,13 +32,7 @@ function computeGlobalStats(users) {
 
   const lastUpdated = new Date().toISOString().slice(0, 10);
 
-  return {
-    totalEntries,
-    totalHours: Math.round(totalHours),
-    totalContributors,
-    topTags,
-    lastUpdated,
-  };
+  return { totalEntries, totalHours: Math.round(totalHours), totalContributors, topTags, lastUpdated };
 }
 
 function buildStatsBlock(stats) {
@@ -61,10 +55,7 @@ function updateReadme() {
   let readme = fs.readFileSync(README, "utf-8");
 
   if (readme.includes("<!-- STATS:START -->")) {
-    readme = readme.replace(
-      /<!-- STATS:START -->[\s\S]*?<!-- STATS:END -->/m,
-      block,
-    );
+    readme = readme.replace(/<!-- STATS:START -->[\s\S]*?<!-- STATS:END -->/m, block);
   } else {
     // Inject after the first --- (after the tagline)
     readme = readme.replace(/(^---\s*\n)/m, `$1\n${block}\n`);
